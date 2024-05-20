@@ -20,10 +20,9 @@ class TransformerAE(nn.Module):
     ):
         super(TransformerAE, self).__init__()
 
-        # self.pos_encoder = PositionalEncoding(d_model=1, max_len=806)
-
         self.transformer_encoder_layer_1 = torch.nn.TransformerEncoderLayer(
             batch_first=True,
+            norm_first=True,
             d_model=in_dim,
             activation=activation,
             dim_feedforward=h_dim,
@@ -32,6 +31,7 @@ class TransformerAE(nn.Module):
 
         self.transformer_encoder_layer_2 = torch.nn.TransformerEncoderLayer(
             batch_first=True,
+            norm_first=True,
             d_model=256,
             activation=activation,
             dim_feedforward=256,
@@ -39,6 +39,7 @@ class TransformerAE(nn.Module):
         )
         self.transformer_encoder_layer_3 = torch.nn.TransformerEncoderLayer(
             batch_first=True,
+            norm_first=True,
             d_model=128,
             activation=activation,
             dim_feedforward=128,
@@ -79,7 +80,7 @@ class TransformerAE(nn.Module):
         self.transformer_decoder_layer_1 = torch.nn.TransformerEncoderLayer(
             d_model=in_dim,
             dim_feedforward=h_dim,
-            activation=torch.nn.functional.gelu,
+            activation=activation,
             nhead=n_heads,
         )
 
