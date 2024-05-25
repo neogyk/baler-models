@@ -1,10 +1,8 @@
 import torch
 from torch import nn
-import pdb
-
 
 class TransformerAE(nn.Module):
-    """_summary_
+    """Autoencoder mixed with the Transformer Encoder layer
 
     Args:
         nn (_type_): _description_
@@ -49,9 +47,10 @@ class TransformerAE(nn.Module):
         self.encoder_layer_1 = torch.nn.Sequential(
             torch.nn.LazyBatchNorm1d(),
             torch.nn.Linear(in_dim, 256),
-        )
-        self.encoder_layer_2 = torch.nn.Sequential(
             torch.nn.LeakyReLU(),
+        )
+        
+        self.encoder_layer_2 = torch.nn.Sequential(
             torch.nn.LazyBatchNorm1d(),
             torch.nn.Linear(256, 128),
             torch.nn.LeakyReLU(),
@@ -69,7 +68,9 @@ class TransformerAE(nn.Module):
             torch.nn.LeakyReLU(),
         )
         self.decoder_layer_2 = torch.nn.Sequential(
-            torch.nn.LazyBatchNorm1d(), torch.nn.Linear(128, 256), torch.nn.LeakyReLU()
+            torch.nn.LazyBatchNorm1d(),
+            torch.nn.Linear(128, 256),
+            torch.nn.LeakyReLU()
         )
         self.decoder_layer_1 = torch.nn.Sequential(
             torch.nn.LazyBatchNorm1d(),
@@ -77,10 +78,12 @@ class TransformerAE(nn.Module):
             torch.nn.LeakyReLU(),
         )
 
-        self.transformer_decoder_layer_1 = torch.nn.TransformerEncoderLayer(
-            d_model=in_dim,
-            dim_feedforward=h_dim,
+
+        self.transformer_decoder_layer_3 = torch.nn.TransformerEncoderLayer(
+            batch_first=True,
+            d_model=128,
             activation=activation,
+            dim_feedforward=128,
             nhead=n_heads,
         )
 
@@ -91,11 +94,11 @@ class TransformerAE(nn.Module):
             dim_feedforward=256,
             nhead=n_heads,
         )
-        self.transformer_decoder_layer_3 = torch.nn.TransformerEncoderLayer(
-            batch_first=True,
-            d_model=128,
+
+        self.transformer_decoder_layer_1 = torch.nn.TransformerEncoderLayer(
+            d_model=in_dim,
+            dim_feedforward=h_dim,
             activation=activation,
-            dim_feedforward=128,
             nhead=n_heads,
         )
 
