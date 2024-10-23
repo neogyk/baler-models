@@ -39,10 +39,10 @@ class TransformerAE(nn.Module):
 
         self.encoder_linear_layers = torch.nn.ModuleList([
         torch.nn.Sequential(
-            torch.nn.LazyBatchNorm1d(),
             torch.nn.Linear(i[0], i[-1]),
             torch.nn.GELU(),
-        ) for i in zip([in_dim] + encoder_h_dim, encoder_h_dim + [latent_dim])
+            torch.nn.BatchNorm1d(i[-1]), 
+            ) for i in zip([in_dim] + encoder_h_dim, encoder_h_dim + [latent_dim])
         ])
         
         self.decoder_transformer_layers = torch.nn.ModuleList(
@@ -61,14 +61,14 @@ class TransformerAE(nn.Module):
 
         self.decoder_linear_layers = torch.nn.ModuleList([
         torch.nn.Sequential(
-            torch.nn.LazyBatchNorm1d(),
             torch.nn.Linear(i[0], i[-1]),
             torch.nn.GELU(),
+            torch.nn.BatchNorm1d(i[-1]),
         ) for i in zip([latent_dim] + decoder_h_dim, decoder_h_dim+ [out_dim])
         ])
 
 
-    def encoder(self, x: torch.Tensor):
+    def encode(self, x: torch.Tensor):
         """_summary_
 
         Args:
@@ -84,7 +84,7 @@ class TransformerAE(nn.Module):
         return x
         
 
-    def decoder(self, x: torch.Tensor):
+    def decode(self, x: torch.Tensor):
         """_summary_
 
         Args:
@@ -108,6 +108,6 @@ class TransformerAE(nn.Module):
         Returns:
             _type_: _description_
         """
-        z = self.encoder(x)
-        x = self.decoder(z)
+        z = self.encode(x)
+        x = self.decode(z)
         return x
