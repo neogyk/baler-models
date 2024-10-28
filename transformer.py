@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 
+
 class TransformerAE(nn.Module):
     """Autoencoder mixed with the Transformer Encoder layer
 
@@ -11,9 +12,9 @@ class TransformerAE(nn.Module):
     def __init__(
         self,
         in_dim,
-        out_dim, 
-        encoder_h_dim:list = [1024, 256, 128, 64],
-        decoder_h_dim:list = [64, 128, 256, 1024],       
+        out_dim,
+        encoder_h_dim: list = [512, 256, 128],
+        decoder_h_dim: list = [128, 256, 512],
         nheads=1,
         latent_dim=64,
         activation=torch.nn.functional.gelu,
@@ -25,48 +26,54 @@ class TransformerAE(nn.Module):
         self.latent_dim = latent_dim
 
         self.encoder_transformer_layers = torch.nn.ModuleList(
-                [nn.TransformerEncoderLayer(
+            [
+                nn.TransformerEncoderLayer(
                     batch_first=True,
                     norm_first=True,
-                    d_model = i,
-                    activation = activation,
-                    dim_feedforward = i,
-                    nhead = nheads,
-                    )
-                 for i in ([in_dim] + encoder_h_dim[:]) 
+                    d_model=i,
+                    activation=activation,
+                    dim_feedforward=i,
+                    nhead=nheads,
+                )
+                for i in ([in_dim] + encoder_h_dim[:] + [latent_dim])
+            ]
+        )
 
-                    ])
+        self.encoder_linear_layers = torch.nn.ModuleList(
+            [
+                torch.nn.Sequential(
+                    torch.nn.BatchNorm1d(i[0]),
+                    torch.nn.Linear(i[0], i[-1]),
+                    torch.nn.GELU(),
+                )
+                for i in zip([in_dim] + encoder_h_dim, encoder_h_dim + [latent_dim])
+            ]
+        )
 
-        self.encoder_linear_layers = torch.nn.ModuleList([
-        torch.nn.Sequential(
-            torch.nn.Linear(i[0], i[-1]),
-            torch.nn.GELU(),
-            torch.nn.BatchNorm1d(i[-1]), 
-            ) for i in zip([in_dim] + encoder_h_dim, encoder_h_dim + [latent_dim])
-        ])
-        
         self.decoder_transformer_layers = torch.nn.ModuleList(
-                [nn.TransformerEncoderLayer(
+            [
+                nn.TransformerEncoderLayer(
                     batch_first=True,
                     norm_first=True,
-                    d_model = i,
-                    activation = activation,
-                    dim_feedforward = i,
-                    nhead = nheads,
-                    
-                    )
-                 for i in ([latent_dim] + decoder_h_dim[:]) 
+                    d_model=i,
+                    activation=activation,
+                    dim_feedforward=i,
+                    nhead=nheads,
+                )
+                for i in ([latent_dim] + decoder_h_dim[:] + [out_dim])
+            ]
+        )
 
-                    ])
-
-        self.decoder_linear_layers = torch.nn.ModuleList([
-        torch.nn.Sequential(
-            torch.nn.Linear(i[0], i[-1]),
-            torch.nn.GELU(),
-            torch.nn.BatchNorm1d(i[-1]),
-        ) for i in zip([latent_dim] + decoder_h_dim, decoder_h_dim+ [out_dim])
-        ])
-
+        self.decoder_linear_layers = torch.nn.ModuleList(
+            [
+                torch.nn.Sequential(
+                    torch.nn.BatchNorm1d(i[0]),
+                    torch.nn.Linear(i[0], i[-1]),
+                    torch.nn.GELU(),
+                )
+                for i in zip([latent_dim] + decoder_h_dim, decoder_h_dim + [out_dim])
+            ]
+        )
 
     def encode(self, x: torch.Tensor):
         """_summary_
@@ -77,12 +84,11 @@ class TransformerAE(nn.Module):
         Returns:
             _type_: _description_
         """
-        for i, layer in enumerate(self.encoder_transformer_layers):
+        for i, layer in enumerate(self.encoder_linear_layers):
             x = self.encoder_transformer_layers[i](x)
             x = self.encoder_linear_layers[i](x)
-        assert x.size()[-1] == self.latent_dim
+        x = self.encoder_transformer_layers[-1](x)
         return x
-        
 
     def decode(self, x: torch.Tensor):
         """_summary_
@@ -93,10 +99,10 @@ class TransformerAE(nn.Module):
         Returns:
             _type_: _description_
         """
-        for i, layer in enumerate(self.decoder_transformer_layers):
+        for i, layer in enumerate(self.decoder_linear_layers):
             x = self.decoder_transformer_layers[i](x)
             x = self.decoder_linear_layers[i](x)
-        assert x.size()[-1] == self.out_dim
+        x = self.decoder_transformer_layers[-1](x)
         return x
 
     def forward(self, x: torch.Tensor):
