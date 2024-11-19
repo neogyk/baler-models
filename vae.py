@@ -116,5 +116,5 @@ class bVAE(nn.Module):
         mu, log_var = self.encode(x)
         z = self.reparameterize(mu, log_var)
         x = self.decode(z)
-        return x  # , mu, log_var]
+        return x  
 
