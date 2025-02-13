@@ -1,4 +1,5 @@
 import torch
+from gbn_layer import GBN
 
 
 class bVAE(torch.nn.Module):
@@ -12,8 +13,9 @@ class bVAE(torch.nn.Module):
 
     def __init__(self, in_dim: int, latent_dim: int):
         super(bVAE, self).__init__()
-        self.hidden_dim = [512, 512, 256, 256]
-        self.hidden_dim_decoder = [latent_dim, 256, 512, 512]
+        latent_dim = 64
+        self.hidden_dim = [1024, 512, 256, 256]
+        self.hidden_dim_decoder = [256, 256, 512, 1024]
         self.latent_dim = latent_dim
         self.output_dim = in_dim
         self.mu_l = torch.nn.Linear(self.hidden_dim[-1], latent_dim)
@@ -29,11 +31,10 @@ class bVAE(torch.nn.Module):
         )
         self.encoder_norm = torch.nn.ModuleList(
             [
-                torch.nn.InstanceNorm1d(h_dim) for h_dim in self.hidden_dim[:]
-            ]  # + [self.latent_dim]]
+                GBN(h_dim) for h_dim in self.hidden_dim[:]
+            ]  
         )
 
-        self.softplus = torch.nn.Softplus()
 
         self.decoder_modules = torch.nn.ModuleList(
             [
@@ -46,7 +47,7 @@ class bVAE(torch.nn.Module):
         )
         self.decoder_norm = torch.nn.ModuleList(
             [
-                torch.nn.InstanceNorm1d(h_dim)
+                GBN(h_dim)
                 for h_dim in self.hidden_dim_decoder[:] + [self.output_dim]
             ]
         )
@@ -73,7 +74,7 @@ class bVAE(torch.nn.Module):
         ), torch.nn.functional.leaky_relu(self.var_l(x))
         return mu, logvar
 
-    def reparameterize(self, mu, logvar, eps: float = 1e-4):
+    def reparameterize(self, mu, logvar, eps: float = 1e-6):
         """
         Reparameterizes the encoded data to sample from the latent space.
 
@@ -100,7 +101,7 @@ class bVAE(torch.nn.Module):
             z = self.decoder_modules[i](z)
             z = self.decoder_norm[i](z)
             z = torch.nn.functional.leaky_relu(z)
-        # z = torch.nn.functional.relu(z)
+        z = torch.nn.functional.tanh(z) 
         return z
 
     def forward(self, x):
